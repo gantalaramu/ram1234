@@ -1,0 +1,63 @@
+#case study decision tree
+
+#load mlbench which has Breasetcancer dataset
+
+library(mlbench)
+require(mlbench)
+
+#load the data set
+
+data("BreastCancer")
+
+#removing rows which has missing value
+
+BreastCancer<-na.omit(BreastCancer)
+
+#removing the unique identifiers, which is useless and would confuse the machine
+
+BreastCancer$Id<-NULL
+
+#partition data to train(70%) and test(30%)
+
+train<-sample(1:nrow(BreastCancer),0.7*nrow(BreastCancer))
+traindata<-BreastCancer[train,]
+testdata<-BreastCancer[-train,]
+
+#package rpart.
+
+install.packages('rpart')
+library(rpart)
+
+#model 1 using recursive partitioning on the train data set
+
+x.rp<-rpart(Class~.,data=traindata)
+
+#predicting classes for the evalution dataset
+
+x.rp.pred<-predict(x.rp,type='class',newdata = testdata)
+
+#extract probabilities for test data
+
+x.rp.prob<-predict(x.rp,type='prob',newdata=testdata)
+
+#plot the decision tree, uncomment this line.
+dev.new() # creating new window for ploting
+plot(x.rp,main='decision tree fm rpart')
+
+#method 2: create model using conditional inference trees
+
+install.packages("party")
+library(party)
+x.ct<-ctree(Class~.,data=traindata)
+x.ct.pred<-predict(x.ct,testdata)
+x.ct.prob<-1-unlist(treeresponse(x.ct,testdata),use.names = F)[seq(1,nrow(testdata)*2,2)]
+plot(x.ct)
+
+#load the ROCR package which draws ROC curves
+library(ROCR)
+
+#create ROCR prediction object from rpart() probabilities
+x.rp.prob.rocr<-prediction(x.rp.prob[,2],testdata$Class)
+x.rp.pref=performance(x.rp.prob.rocr,'tpr','fpr')
+dev()
+plot(x.rp.pref,col=2,main='roc curve')
