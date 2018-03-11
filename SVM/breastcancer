@@ -1,0 +1,43 @@
+install.packages('mlbench')
+library(mlbench)
+data=data('BreastCancer')
+head(BreastCancer)
+str(BreastCancer)
+names(BreastCancer)
+#Removing the missing values
+BreastCancer=na.omit(BreastCancer)
+dim(BreastCancer)
+BreastCancer$Id=NULL
+c=BreastCancer$Class
+c1=ifelse(c=='benign',1,0)
+BreastCancer$Class=c1
+#Divide the data
+train=sample(1:nrow(BreastCancer),0.7*nrow(BreastCancer))
+traindata=BreastCancer[train,]
+testdata=BreastCancer[-train,]
+dim(traindata)
+dim(testdata)
+#For performing SVM
+install.packages('e1071')
+library(e1071)
+#SVM requires tuning
+x.svm=svm(Class~.,data=traindata,cost=4,gamma=0.5,probability=TRUE)
+x.svm
+x.svm.prob=predict(x.svm,type='prob',testdata,probability=TRUE)
+x.svm.prob
+tunesvm=tune(svm,Class~.,data=traindata,ranges=list(gamma=1.5^(-1:1),cost=1.5^(2:4)))
+tunesvm
+#Output: best parameters:gamma:cost::0.6666667:2.25-->insert it in x.svm
+x.svm=svm(Class~.,data=traindata,cost=2.25,gamma=0.6,probability=TRUE)
+x.svm
+#Building the bestfit model
+trainfit=fitted(x.svm)
+testpred=cbind(testdata,x.svm.prob)
+traintable=table(traindata$Class,trainfit)
+traintable
+testtable=table(testdata$Class,x.svm.prob)
+install.packages('ROCR')
+library(ROCR)
+ROCpred=prediction(trainfit,traindata$Class)
+ROCpref=performance(ROCpred,'tpr','fpr')
+plot(ROCpref)
