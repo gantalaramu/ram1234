@@ -1,0 +1,29 @@
+#To import the data
+import pandas as pd
+df=pd.read_csv("C:\\Users\\SUDEEP\\Desktop\\Grades.csv")
+#Reference Catagory
+from patsy import dmatrices, Treatment
+y,x=dmatrices('admit~gre+gpa+C(rank,Treatment(reference=4))',df,return_type='dataframe')
+
+#To Split Data into 2 parts
+from sklearn.model_selection import train_test_split
+x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=0)
+
+##To build logistic regression
+#Fit Logit model_selection
+import statsmodels.api as sm
+logit=sm.Logit(y_train,x_train)
+result=logit.fit()
+
+#Summary of Logistic regression model
+result.summary2()
+result.paramas
+##To generate confusion matrix
+##Confusion Matrix
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
+result.pred_table()
+y_pred_train=result.predict(x_train)
+y_pred_test=result.predict(x_test)
+accuracy_score([1 if p>0.5 else 0 for p in y_pred_train],y_train)
+accuracy_score([1 if p>0.5 else 0 for p in y_pred_test],y_test)
