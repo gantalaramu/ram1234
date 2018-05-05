@@ -1,0 +1,57 @@
+#Analysing German Credit Data
+setwd('‪C:\\Users\\SUDEEP\\Desktop\\abc')
+data=read.csv('C:\\Users\\SUDEEP\\Desktop\\German_Credit_Data.csv')
+dim(data)
+names(data)
+str(data)
+#Converting the int to categorical
+data$Status=as.factor(data$Status)
+str(data)
+#spliting the data
+train=sample(1:nrow(data),0.7*nrow(data))#From 1 to 1000, we are choosing70% of data
+traindata=data[train,]
+dim(traindata)
+testdata=data[-train,]
+dim(testdata)
+fit1=glm(Status~.,data=traindata,family='binomial')
+summary(fit1)
+fit2=NagelkerkeR2(fit1)
+fit2
+rstudent=rstudent(fit1,inf1=influence(fit1,do.coef=T))
+head(rstudent)
+rstudent_frame=as.data.frame(rstudent)
+head(rstudent_frame)
+outliers=subset(rstudent_frame,rstudent_frame$rstudent>1.5|rstudent_frame$rstudent<(-1.5))
+dim(outliers)
+outrec=rownames(outliers)
+head(outrec)
+outnumeric=as.numeric(outrec)
+head(outnumeric)
+nooutdata=traindata[-outnumeric,]
+dim(nooutdata)
+dim(outliers)
+which(is.na(nooutdata))
+fit3=glm(Status~.,data=nooutdata,family = 'binomial')
+library(car)
+vif=vif(fit3)
+vif
+nomcdata=nooutdata
+boruta=Boruta(Status~.,nomcdata,doTrace=2)#execute this one after executing this very line without assigning it to a variable
+names(boruta)
+head(boruta)
+#Remove variable: Present.Residence.Since(11),job(17),Personal.Status. Gender(9),existing credit(16),Telephone(19)
+predpowerdata=nomcdata[,-c(9,11,16,17,19)]
+dim(predpowerdata)
+dim(nomcdata)
+fit4=glm(Status~.,data=predpowerdata,family = 'binomial')
+NagelkerkeR2(fit4)
+summary(fit4)
+trainpred=fitted(fit4)
+head(trainpred)
+class(trainpred)
+trainpred=as.data.frame(trainpred)
+head(trainpred)
+ROCpred=prediction(trainpred$trainpred,predpowerdata$Status)
+ROCpref=performance(ROCpred,'tpr','fpr')
+plot(ROCpref)
+auc(predpowerdata$Status,trainpred$trainpred)
