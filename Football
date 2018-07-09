@@ -1,0 +1,119 @@
+##################To set the work directory###############
+setwd('D:\\PGP\\Case Study\\R\\Linear Regression\\Linear Regression (FIFA)')
+getwd()
+##################To import the data into R###############
+fifa<-read.csv('Raw Data\\FIFA18.csv')
+dim(fifa)
+
+names(fifa)
+str(fifa)
+Wage<-gsub('K','',fifa$Wage)
+Wage<-as.integer(Wage)
+data<-fifa[-37]
+data<-cbind(data,Wage)
+dim(data)
+str(data)
+names(data)
+index<-sample(1:nrow(data),0.7*nrow(data))
+train<-data[index,]
+test<-data[-index,]
+dim(train)
+
+dim(test)
+
+fit1<-lm(Wage~.-Wage,train)
+summary(fit1)
+##################To identify and remove the outliers###############
+rstudent<-rstudent(fit1,infl = influence(fit1,do.coef=TRUE))
+frame<-as.data.frame(rstudent)
+head(frame)
+
+outlier<-subset(frame,frame$rstudent>1.5|frame$rstudent<(-1.5))
+outlierindex<-rownames(outlier)
+head(outlierindex)
+
+dim(outlierindex)
+
+length(outlierindex)
+
+
+outlierdata<-data[as.numeric(outlierindex),]
+outlierfreedata<-data[-as.numeric(outlierindex),]
+dim(outlierdata)
+
+dim(outlierfreedata)
+
+index1<-sample(1:nrow(outlierfreedata),0.7*nrow(outlierfreedata))
+train1<-outlierfreedata[index1,]
+test1<-outlierfreedata[-index1,]
+dim(train1)
+
+dim(test1)
+
+fit2<-lm(Wage~.-Wage,train1)
+summary(fit2)
+which(is.na(train1))
+
+##################To check the multicollinearity###############
+install.packages('car')
+library(car)
+vif<-vif(fit2)
+which(vif>10)
+
+vifdata<-train1[-c(6,10,13,14,15,16,17,19,23,27,29,32)]
+dim(vifdata)
+
+
+
+fit3<-lm(Wage~.-Wage,vifdata)
+summary(fit3)
+##################To calculate the standardised betas###############
+install.packages('QuantPsyc')
+library(QuantPsyc)
+
+predictive<-abs(lm.beta(fit3))
+head(predictive)
+ frame1<-as.data.frame(predictive)
+ 
+category<-ifelse(frame1$predictive<0.02,"No",ifelse(frame1$predictive<0.1,"Week",ifelse(frame1$predictive<0.3,"Medium","High")))
+frame1<-cbind(frame1,category)
+
+which(frame1$category=='No')
+predictivedata<-vifdata[-c(2,8,11,18)]
+dim(predictivedata)
+##################To develop the final model###############
+fit4<-lm(Wage~.-Wage,predictivedata)
+
+summary(fit4)
+train_fit<-fitted(fit4)
+head(train_fit)
+
+dim(train_fit)
+
+length(train_fit)
+
+
+test_fit<-predict(fit4,test1)
+head(test_fit)
+
+dim(test_fit)
+
+
+length(test_fit)
+
+
+train_model<-cbind(train_fit,train1$Wage)
+test_model<-cbind(test_fit,test1$Wage)
+write.csv(train_model,'train-model.csv')
+write.csv(test_model,'test-model.csv')
+
+plot(fit4)
+
+boxplot(rstudent)
+
+install.packages('MLmetrics')
+library(MLmetrics)
+MAPE(train_fit,predictivedata$Wage)
+# [1] 2.428152
+MAPE(test_fit,test1$Wage)
+# [1] 2.394859
